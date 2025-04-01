@@ -4,6 +4,14 @@ from homeassistant import config_entries
 from homeassistant.helpers import selector
 
 from .const import DOMAIN
+from .sensor import (
+    CONF_SETPOINT,
+    CONF_THRESHOLD,
+    CONF_MIN_AMPLITUDE,
+    DEFAULT_SETPOINT,
+    DEFAULT_THRESHOLD,
+    DEFAULT_MIN_AMPLITUDE,
+)
 
 class PHControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for pH Control."""
@@ -20,7 +28,7 @@ class PHControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=user_input
             )
 
-        # Show form
+        # Show form with configuration options
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
@@ -31,6 +39,9 @@ class PHControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             multiple=False,
                         ),
                     ),
+                    vol.Optional(CONF_SETPOINT, default=DEFAULT_SETPOINT): vol.Coerce(float),
+                    vol.Optional(CONF_THRESHOLD, default=DEFAULT_THRESHOLD): vol.Coerce(float),
+                    vol.Optional(CONF_MIN_AMPLITUDE, default=DEFAULT_MIN_AMPLITUDE): vol.Coerce(float),
                 }
             ),
             errors=errors,
