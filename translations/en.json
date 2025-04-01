@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "pH Control",
+        "description": "Set up pH oscillation analysis for alkalinity prediction",
+        "data": {
+          "name": "Name",
+          "source_entity": "pH Sensor Entity",
+          "setpoint": "Setpoint (typically 8.2 for pools)",
+          "time_window": "Analysis Time Window (hours)",
+          "min_amplitude": "Minimum Amplitude to Detect"
+        }
+      }
+    },
+    "error": {
+      "unknown": "Unknown error occurred."
+    },
+    "abort": {
+      "already_configured": "This pH sensor is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "pH Control Options",
+        "description": "Adjust parameters for pH oscillation analysis",
+        "data": {
+          "setpoint": "Setpoint (typically 8.2 for pools)",
+          "time_window": "Analysis Time Window (hours)",
+          "min_amplitude": "Minimum Amplitude to Detect",
+          "noise_filter": "Noise Filter Threshold",
+          "min_duration": "Minimum Segment Duration (seconds)"
+        }
+      }
+    }
+  }
+}
