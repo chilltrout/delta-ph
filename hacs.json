@@ -1,0 +1,8 @@
+{
+  "name": "pH Control",
+  "render_readme": true,
+  "content_in_root": false,
+  "domains": ["sensor"],
+  "country": ["ALL"],
+  "homeassistant": "2023.8.0"
+}
