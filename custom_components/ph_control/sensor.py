@@ -3,7 +3,7 @@ import logging
 from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.components.recorder.models import State
+from homeassistant.core import State
 from homeassistant.components.recorder import get_instance
 from homeassistant.util import dt as dt_util
 
