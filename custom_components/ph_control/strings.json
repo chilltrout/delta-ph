@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up pH Control",
+        "description": "Set up pH Controller with a pH sensor entity",
+        "data": {
+          "source_entity": "pH Sensor Entity",
+          "setpoint": "pH Setpoint",
+          "time_window": "Time Window (seconds)",
+          "min_amplitude": "Minimum pH Amplitude",
+          "noise_filter": "Noise Filter Value",
+          "min_duration": "Minimum Duration (seconds)"
+        }
+      }
+    },
+    "error": {
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This sensor is already configured for pH control"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "pH Control Options",
+        "data": {
+          "setpoint": "pH Setpoint",
+          "time_window": "Time Window (seconds)",
+          "min_amplitude": "Minimum pH Amplitude",
+          "noise_filter": "Noise Filter Value",
+          "min_duration": "Minimum Duration (seconds)"
+        }
+      }
+    }
+  }
+}
