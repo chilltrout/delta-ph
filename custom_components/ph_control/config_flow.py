@@ -1,8 +1,6 @@
 """Config flow for pH Control integration."""
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import DOMAIN
@@ -12,14 +10,11 @@ class PHControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(self, user_input=None) -> FlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
         
         if user_input is not None:
-            # Validate input here if needed
-            # For example, check if source entity exists
-            
             return self.async_create_entry(
                 title=f"pH Control for {user_input['source_entity']}", 
                 data=user_input
