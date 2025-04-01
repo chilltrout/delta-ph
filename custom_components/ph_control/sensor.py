@@ -13,14 +13,27 @@ from .const import DOMAIN, ATTR_PEAKS, ATTR_TROUGHS, ATTR_AMPLITUDE, ATTR_OSCILL
 
 _LOGGER = logging.getLogger(__name__)
 
+CONF_SETPOINT = "setpoint"
+CONF_THRESHOLD = "threshold"
+CONF_MIN_AMPLITUDE = "min_amplitude"
+
+DEFAULT_SETPOINT = 7.8  # Midpoint of typical pH oscillation
+DEFAULT_THRESHOLD = 0.3 # How much deviation is significant
+DEFAULT_MIN_AMPLITUDE = 0.1 # Minimum change to consider
+
 class PHAmplitudeSensor(SensorEntity):
     """Representation of a pH Amplitude Sensor."""
 
-    def __init__(self, hass: HomeAssistant, entry_id: str, source_entity: str) -> None:
+    def __init__(self, hass: HomeAssistant, entry_id: str, source_entity: str, 
+                 setpoint: float, threshold: float, min_amplitude: float) -> None:
         """Initialize the amplitude sensor."""
         self.hass = hass
         self._entry_id = entry_id
         self._source_entity = source_entity
+        self._setpoint = setpoint
+        self._threshold = threshold
+        self._min_amplitude = min_amplitude
+        
         self._attr_name = f"pH Amplitude {source_entity.split('.')[1]}"
         self._attr_unique_id = f"{entry_id}_amplitude"
         self._attr_native_unit_of_measurement = ""
@@ -31,6 +44,8 @@ class PHAmplitudeSensor(SensorEntity):
         self._troughs = []
         self._last_value = None
         self._trend = None
+        self._significant_change = False
+        self._last_direction_change_time = None
         self._unsub_listener = None
 
     async def async_added_to_hass(self) -> None:
@@ -44,11 +59,24 @@ class PHAmplitudeSensor(SensorEntity):
 
             try:
                 current_value = float(new_state.state)
+                current_time = datetime.now()
+                
                 if self._last_value is None:
                     self._last_value = current_value
                     return
 
-                # Detect peaks and troughs
+                # Check if the change is significant (exceeds min amplitude)
+                value_change = abs(current_value - self._last_value)
+                if value_change < self._min_amplitude:
+                    # Ignore small fluctuations
+                    self._last_value = current_value
+                    return
+                
+                # Determine if we've moved significantly from the setpoint
+                deviation_from_setpoint = abs(current_value - self._setpoint)
+                self._significant_change = deviation_from_setpoint > self._threshold
+                
+                # Detect peaks and troughs based on trend changes
                 if self._trend is None:
                     # Initialize trend direction
                     if current_value > self._last_value:
@@ -56,15 +84,19 @@ class PHAmplitudeSensor(SensorEntity):
                     elif current_value < self._last_value:
                         self._trend = "down"
                 else:
-                    # Detect trend reversals
+                    # Detect significant trend reversals
                     if self._trend == "up" and current_value < self._last_value:
-                        # Peak detected
-                        self._peaks.append(self._last_value)
-                        self._trend = "down"
+                        # Peak detected - only register if significant
+                        if self._significant_change:
+                            self._peaks.append(self._last_value)
+                            self._trend = "down"
+                            self._last_direction_change_time = current_time
                     elif self._trend == "down" and current_value > self._last_value:
-                        # Trough detected
-                        self._troughs.append(self._last_value)
-                        self._trend = "up"
+                        # Trough detected - only register if significant
+                        if self._significant_change:
+                            self._troughs.append(self._last_value)
+                            self._trend = "up"
+                            self._last_direction_change_time = current_time
 
                 # Calculate amplitude if we have both peaks and troughs
                 if self._peaks and self._troughs:
@@ -97,16 +129,24 @@ class PHAmplitudeSensor(SensorEntity):
             ATTR_TROUGHS: self._troughs[-10:] if self._troughs else [],
             "last_updated": datetime.now().isoformat(),
             "trend": self._trend,
+            "setpoint": self._setpoint,
+            "threshold": self._threshold,
+            "min_amplitude": self._min_amplitude
         }
 
 class PHOscillationSensor(SensorEntity):
     """Representation of the pH Oscillation Count Sensor."""
 
-    def __init__(self, hass: HomeAssistant, entry_id: str, source_entity: str) -> None:
+    def __init__(self, hass: HomeAssistant, entry_id: str, source_entity: str,
+                 setpoint: float, threshold: float, min_amplitude: float) -> None:
         """Initialize the oscillation sensor."""
         self.hass = hass
         self._entry_id = entry_id
         self._source_entity = source_entity
+        self._setpoint = setpoint
+        self._threshold = threshold
+        self._min_amplitude = min_amplitude
+        
         self._attr_name = f"pH Oscillations {source_entity.split('.')[1]}"
         self._attr_unique_id = f"{entry_id}_oscillations"
         self._attr_native_unit_of_measurement = "cycles"
@@ -116,6 +156,8 @@ class PHOscillationSensor(SensorEntity):
         self._direction_changes = 0
         self._last_value = None
         self._trend = None
+        self._significant_change = False
+        self._last_direction_change_time = None
         self._unsub_listener = None
 
     async def async_added_to_hass(self) -> None:
@@ -129,10 +171,23 @@ class PHOscillationSensor(SensorEntity):
 
             try:
                 current_value = float(new_state.state)
+                current_time = datetime.now()
+                
                 if self._last_value is None:
                     self._last_value = current_value
                     return
 
+                # Check if the change is significant (exceeds min amplitude)
+                value_change = abs(current_value - self._last_value)
+                if value_change < self._min_amplitude:
+                    # Ignore small fluctuations
+                    self._last_value = current_value
+                    return
+                
+                # Determine if we've moved significantly from the setpoint
+                deviation_from_setpoint = abs(current_value - self._setpoint)
+                self._significant_change = deviation_from_setpoint > self._threshold
+                
                 # Detect trend changes
                 if self._trend is None:
                     # Initialize trend direction
@@ -141,13 +196,17 @@ class PHOscillationSensor(SensorEntity):
                     elif current_value < self._last_value:
                         self._trend = "down"
                 else:
-                    # Detect trend reversals
+                    # Detect significant trend reversals
                     if self._trend == "up" and current_value < self._last_value:
-                        self._direction_changes += 1
-                        self._trend = "down"
+                        if self._significant_change:
+                            self._direction_changes += 1
+                            self._trend = "down"
+                            self._last_direction_change_time = current_time
                     elif self._trend == "down" and current_value > self._last_value:
-                        self._direction_changes += 1
-                        self._trend = "up"
+                        if self._significant_change:
+                            self._direction_changes += 1
+                            self._trend = "up"
+                            self._last_direction_change_time = current_time
                 
                 # Each complete oscillation has two direction changes
                 self._oscillations = self._direction_changes // 2
@@ -178,6 +237,9 @@ class PHOscillationSensor(SensorEntity):
             "direction_changes": self._direction_changes,
             "last_updated": datetime.now().isoformat(),
             "trend": self._trend,
+            "setpoint": self._setpoint,
+            "threshold": self._threshold,
+            "min_amplitude": self._min_amplitude
         }
 
 async def async_setup_entry(
@@ -189,9 +251,18 @@ async def async_setup_entry(
     config = config_entry.data
     source_entity = config.get("source_entity")
     entry_id = config_entry.entry_id
+    
+    # Get the configurable parameters with defaults
+    setpoint = config.get(CONF_SETPOINT, DEFAULT_SETPOINT)
+    threshold = config.get(CONF_THRESHOLD, DEFAULT_THRESHOLD)
+    min_amplitude = config.get(CONF_MIN_AMPLITUDE, DEFAULT_MIN_AMPLITUDE)
 
     # Create amplitude and oscillation sensors
-    amplitude_sensor = PHAmplitudeSensor(hass, entry_id, source_entity)
-    oscillation_sensor = PHOscillationSensor(hass, entry_id, source_entity)
+    amplitude_sensor = PHAmplitudeSensor(
+        hass, entry_id, source_entity, setpoint, threshold, min_amplitude
+    )
+    oscillation_sensor = PHOscillationSensor(
+        hass, entry_id, source_entity, setpoint, threshold, min_amplitude
+    )
 
     async_add_entities([amplitude_sensor, oscillation_sensor], True)
