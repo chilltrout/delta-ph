@@ -1,34 +1,44 @@
 """The pH Control integration."""
-import asyncio
+from __future__ import annotations
+
 import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.const import Platform
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the pH Control component from yaml configuration."""
+# List of platforms to support
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
+
+async def async_setup(hass: HomeAssistant, config):
+    """Set up the pH Control component from YAML."""
     hass.data.setdefault(DOMAIN, {})
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up pH Control from a config entry."""
     hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = entry.data
     
-    # Forward the setup to the sensor platform
-await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    
+    entry.async_on_unload(entry.add_update_listener(update_listener))
+    
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-    # Forward the unloading to the sensor platform
-    unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     
-    # Remove config entry from domain data
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-
+        hass.data[DOMAIN].pop(entry.entry_id)
+        
     return unload_ok
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
